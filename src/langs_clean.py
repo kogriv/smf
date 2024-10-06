@@ -1,41 +1,50 @@
 import re
-import nltk
+import os
+# import nltk
 from nltk.corpus import stopwords
 import pandas as pd
-from langdetect import detect, DetectorFactory
-from langdetect.lang_detect_exception import LangDetectException
 
+try:
+    # Проверяем, выполняется ли код на Kaggle
+    is_kaggle = 'KAGGLE_KERNEL_RUN_TYPE' in os.environ
 
-# Настройка для стабилизации детектора языка
-DetectorFactory.seed = 0
-
-# Функция для определения языка текста
-def detect_language(text):
+    # Попробуем импортировать необходимые библиотеки
     try:
-        # Определение языка текста
-        return detect(text)
-    except LangDetectException:
-        # Если текст слишком короткий или не удалось определить язык
-        return 'unknown'
+        from langdetect import detect, DetectorFactory
+        from langdetect.lang_detect_exception import LangDetectException
 
-# Функция для определения языка текста с проверкой существования столбца 'language_detected'
-def detect_language_column(df):
-    if 'language_detected' not in df.columns:
-        df['language_detected'] = df['text'].apply(detect_language)
-    else:
-        print("'language_detected' уже существует в DataFrame.")
+        # Настройка для стабилизации детектора языка
+        DetectorFactory.seed = 0
 
-# Применение функции к DataFrame
-# detect_language_column(dtr)
-# detect_language_column(dts)
+        # Функция для определения языка текста
+        def detect_language(text):
+            try:
+                return detect(text)
+            except LangDetectException:
+                return 'unknown'
 
-# Подсчёт доли каждого языка в датасете
-def language_distribution(df, column):
-    language_counts = df[column].value_counts(normalize=True)
-    print(f"Распределение языков в датасете:\n{language_counts}")
+        # Функция для определения языка текста с проверкой столбца 'language_detected'
+        def detect_language_column(df):
+            if 'language_detected' not in df.columns:
+                df['language_detected'] = df['text'].apply(detect_language)
+            else:
+                print("'language_detected' уже существует в DataFrame.")
 
-# language_distribution(dtr, 'language_detected')
-# language_distribution(dts, 'language_detected')
+        # Подсчёт доли каждого языка в датасете
+        def language_distribution(df, column):
+            language_counts = df[column].value_counts(normalize=True)
+            print(f"Распределение языков в датасете:\n{language_counts}")
+
+    except ImportError as e:
+        if is_kaggle:
+            print(f"Модуль langdetect недоступен на Kaggle: {e}")
+        else:
+            # На локальной машине можно попробовать установить модуль
+            print(f"Модуль langdetect не установлен: {e}")
+            print("Попробуйте установить его с помощью 'pip install langdetect'.")
+
+except Exception as e:
+    print(f"Произошла ошибка: {e}")
 
 # распределение языков в датасете
 lang_distrib_train = {
