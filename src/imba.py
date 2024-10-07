@@ -7,9 +7,11 @@ import matplotlib.pyplot as plt
 # import pandas as pd
 import numpy as np
 
-def plot_class_distribution(df, target_column='cartoon', verbose=False):
+def plot_class_distribution(df, target_column='cartoon', rare_class_only = False, verbose=False):
     # Подсчёт количества примеров для каждого класса
-    class_counts = df[target_column].value_counts()
+    class_counts = df[target_column].value_counts(normalize=True)
+    if rare_class_only:
+        class_counts = class_counts[class_counts<0.9]
     
     if verbose:
         # Вывод распределения классов
