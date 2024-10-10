@@ -1,8 +1,10 @@
 import re
 import os
-# import nltk
+#import nltk
 from nltk.corpus import stopwords
 import pandas as pd
+
+#nltk.download('stopwords')
 
 try:
     # Проверяем, выполняется ли код на Kaggle
@@ -132,45 +134,48 @@ lang_distrib_test = {
 'lt' :      0.000018
 }
 
-# Словарь stop_words_dict, содержащий языки, детектированные в датасете
-stop_words_dict = {
-    'ru': set(stopwords.words('russian')),  # Русский
-    'en': set(stopwords.words('english')),  # Английский
-    # 'es': set(stopwords.words('spanish')),  # Испанский
-    # # 'bg': set(stopwords.words('bulgarian')),  # Болгарский
-    # # 'pl': set(stopwords.words('polish')),  # Польский
-    # 'pt': set(stopwords.words('portuguese')),  # Португальский
-    # 'ar': set(stopwords.words('arabic')),  # Арабский
-    # # 'uk': set(stopwords.words('ukrainian')),  # Украинский
-    # 'ca': set(stopwords.words('catalan')),  # Каталанский
-    # 'no': set(stopwords.words('norwegian')),  # Норвежский
-    # # 'hi': set(stopwords.words('hindi')),  # Хинди
-    # 'id': set(stopwords.words('indonesian')),  # Индонезийский
-    # 'nl': set(stopwords.words('dutch')),  # Нидерландский
-    # 'sv': set(stopwords.words('swedish')),  # Шведский
-    # # 'ko': set(stopwords.words('korean')),  # Корейский
-    # 'de': set(stopwords.words('german')),  # Немецкий
-    # 'da': set(stopwords.words('danish')),  # Датский
-    # # 'hr': set(stopwords.words('croatian')),  # Хорватский
-    # # 'af': set(stopwords.words('afrikaans')),  # Африкаанс
-    # 'fr': set(stopwords.words('french')),  # Французский
-    # 'ro': set(stopwords.words('romanian')),  # Румынский
-    # 'tr': set(stopwords.words('turkish')),  # Турецкий
-    # 'it': set(stopwords.words('italian')),  # Итальянский
-    # # 'tl': set(stopwords.words('tagalog')),  # Тагальский
-    # # 'vi': set(stopwords.words('vietnamese')),  # Вьетнамский
-    # # 'sl': set(stopwords.words('slovenian')),  # Словенский
-    # 'fi': set(stopwords.words('finnish')),  # Финский
-    # # 'lt': set(stopwords.words('lithuanian')),  # Литовский
-    # 'hu': set(stopwords.words('hungarian')),  # Венгерский
-    # 'el': set(stopwords.words('greek')),  # Греческий
-    # # 'sk': set(stopwords.words('slovak')),  # Словацкий
-}
+try:
+    # Словарь stop_words_dict, содержащий языки, детектированные в датасете
+    stop_words_dict = {
+        'ru': set(stopwords.words('russian')),  # Русский
+        'en': set(stopwords.words('english')),  # Английский
+        # 'es': set(stopwords.words('spanish')),  # Испанский
+        # # 'bg': set(stopwords.words('bulgarian')),  # Болгарский
+        # # 'pl': set(stopwords.words('polish')),  # Польский
+        # 'pt': set(stopwords.words('portuguese')),  # Португальский
+        # 'ar': set(stopwords.words('arabic')),  # Арабский
+        # # 'uk': set(stopwords.words('ukrainian')),  # Украинский
+        # 'ca': set(stopwords.words('catalan')),  # Каталанский
+        # 'no': set(stopwords.words('norwegian')),  # Норвежский
+        # # 'hi': set(stopwords.words('hindi')),  # Хинди
+        # 'id': set(stopwords.words('indonesian')),  # Индонезийский
+        # 'nl': set(stopwords.words('dutch')),  # Нидерландский
+        # 'sv': set(stopwords.words('swedish')),  # Шведский
+        # # 'ko': set(stopwords.words('korean')),  # Корейский
+        # 'de': set(stopwords.words('german')),  # Немецкий
+        # 'da': set(stopwords.words('danish')),  # Датский
+        # # 'hr': set(stopwords.words('croatian')),  # Хорватский
+        # # 'af': set(stopwords.words('afrikaans')),  # Африкаанс
+        # 'fr': set(stopwords.words('french')),  # Французский
+        # 'ro': set(stopwords.words('romanian')),  # Румынский
+        # 'tr': set(stopwords.words('turkish')),  # Турецкий
+        # 'it': set(stopwords.words('italian')),  # Итальянский
+        # # 'tl': set(stopwords.words('tagalog')),  # Тагальский
+        # # 'vi': set(stopwords.words('vietnamese')),  # Вьетнамский
+        # # 'sl': set(stopwords.words('slovenian')),  # Словенский
+        # 'fi': set(stopwords.words('finnish')),  # Финский
+        # # 'lt': set(stopwords.words('lithuanian')),  # Литовский
+        # 'hu': set(stopwords.words('hungarian')),  # Венгерский
+        # 'el': set(stopwords.words('greek')),  # Греческий
+        # # 'sk': set(stopwords.words('slovak')),  # Словацкий
+    }
 
-# Языки, для которых нет встроенных стоп-слов в NLTK
-# 'bulgarian', 'polish', 'ukrainian', 'hindi', 'korean', 'croatian'
-# 'afrikaans', 'tagalog', 'vietnamese', 'slovenian', 'lithuanian', 'slovak'
-# 'ja', 'et', 'mk', 'cy', 'so', 'th', 'sw'
+    # Языки, для которых нет встроенных стоп-слов в NLTK
+    # 'bulgarian', 'polish', 'ukrainian', 'hindi', 'korean', 'croatian'
+    # 'afrikaans', 'tagalog', 'vietnamese', 'slovenian', 'lithuanian', 'slovak'
+    # 'ja', 'et', 'mk', 'cy', 'so', 'th', 'sw'
+except Exception as e:
+    print('Error ocured while nltk.stopwords dict ctreating:',e)
 
 # Словарь с регулярными выражениями для каждого языка
 # в базовом варианте используем только русский и английский алфавиты
