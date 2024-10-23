@@ -107,33 +107,28 @@ class MissingValueHandler(BaseEstimator, TransformerMixin):
         return X
 
     def _apply_custom_basic(self, X):
-        """
-        Метод для обработки пропусков на основе кастомных правил из missval_dict.
-        """
-        # Обрезаем словарь fill_values_, оставляя только колонки, которые есть в X
         relevant_fill_values = {col: val for col, val in self.fill_values_.items() if col in X.columns}
 
         for column, strategy in relevant_fill_values.items():
             if strategy.startswith('value_'):
                 value = strategy.split('value_')[1]
-                # Если value является числом, преобразуем его в соответствующий тип
                 try:
                     if '.' in value:
-                        value = float(value)  # Преобразуем к float, если есть точка
+                        value = float(value)
                     else:
-                        value = int(value)  # Преобразуем к int, если целое число
+                        value = int(value)
                 except ValueError:
-                    pass  # Если это не число, оставляем как строку
-                
-                if isinstance(value, (int, float)):  # Если это число, заполняем числовые пропуски
-                    X[column].fillna(value, inplace=True)
+                    pass
+
+                if isinstance(value, (int, float)):
+                    X[column] = X[column].fillna(value)
                 else:
                     if value.lower() == 'na':
-                        X[column].fillna('NA', inplace=True)
+                        X[column] = X[column].fillna('NA')
                     elif value.lower() == 'none':
-                        X[column].fillna('none', inplace=True)
+                        X[column] = X[column].fillna('none')
                     else:
-                        X[column].fillna(value, inplace=True)
+                        X[column] = X[column].fillna(value)
 
             elif strategy.startswith('agg_'):
                 agg_info = strategy.split('agg_')[1]
@@ -142,18 +137,13 @@ class MissingValueHandler(BaseEstimator, TransformerMixin):
                     X[column] = self._fill_agg_by_group(X, column, group_column, agg_func)
                 else:
                     agg_func = agg_info
-                    X[column].fillna(self._calculate_agg(X, column, agg_func), inplace=True)
+                    X[column] = X[column].fillna(self._calculate_agg(X, column, agg_func))
 
         return X
 
     def _fill_agg_by_group(self, X, column, group_column, agg_func):
-        """
-        Заполнение пропусков с агрегацией по группам.
-        Если агрегация по группе возвращает пустое значение, используется агрегация по всему столбцу.
-        """
         grouped = X.groupby(group_column)[column]
 
-        # Выполняем агрегацию в зависимости от указанной функции
         if agg_func == 'median':
             fill_values = grouped.transform('median')
             fallback_value = X[column].median()
@@ -181,15 +171,11 @@ class MissingValueHandler(BaseEstimator, TransformerMixin):
         else:
             raise ValueError(f"Unknown aggregation function: {agg_func}")
 
-        # Если есть пустые значения после группировки, заполняем их fallback значением по всему столбцу
-        fill_values.fillna(fallback_value, inplace=True)
-
+        fill_values = fill_values.fillna(fallback_value)
         return X[column].fillna(fill_values)
 
+
     def _calculate_agg(self, X, column, agg_func):
-        """
-        Вычисление агрегирующей функции для всего столбца.
-        """
         if agg_func == 'median':
             return X[column].median()
         elif agg_func == 'mean':
@@ -208,5 +194,6 @@ class MissingValueHandler(BaseEstimator, TransformerMixin):
             return X[column].var()
         else:
             raise ValueError(f"Unknown aggregation function: {agg_func}")
+
     
 
