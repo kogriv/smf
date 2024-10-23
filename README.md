@@ -47,3 +47,78 @@ NLP multiclass classification model
    ```bash
    pip install -r requirements.txt
 
+## Пример использования гибридной модели
+Ниже приведен пример использования гибридной модели, которая объединяет трансформеры для обработки текстов и полносвязные слои для числовых данных. В этом примере используются как сниппеты данных, так и полные данные, и демонстрируется типичный пайплайн работы с моделью: от предобработки данных до обучения и оценки.
+
+Шаги:
+1. Инициализация процессора данных Мы используем `hymo.DataPreprocessor` для предобработки данных, включая текстовые данные для модели трансформера и числовые признаки.
+```python
+# Создадим обработчик данных
+processor = hymo.DataPreprocessor(transformer_model_name=MODEL_NAME, max_seq_length=MAX_SEQ_LENGTH)
+```
+2. Подготовка сниппетов данных Мы можем использовать сниппеты данных, например, для быстрого тестирования. Поля выбираются в зависимости от структуры данных. Также можно задать количество отсутствующих или редких объектов для исключения.
+```python
+# Создадим сниппет данных для тестирования
+sample_dtr = processor.get_data(df=dtr, use_snippet=True,
+                                fields=['is_shorts', 'broadcast',
+                                        'yt_channel_type', 'flag_closed', 'international'],
+                                none_obj_count=2,
+                                rare_obj_count=2)
+
+sample_dts = processor.get_data(df=dts, use_snippet=True,
+                                fields=['is_shorts', 'broadcast',
+                                        'yt_channel_type', 'flag_closed', 'international'],
+                                none_obj_count=2,
+                                rare_obj_count=2)
+```
+3. Инициализация модели Гибридная модель, комбинирующая текстовые и числовые данные, создается с помощью `hymo.HybridModel`.
+```python
+# Создадим модель
+hymodel = hymo.HybridModel(transformer_model_name=MODEL_NAME, num_labels=num_classes)
+```
+4. Настройка сервисных объектов для модели `hymo.ModelService` используется для управления параметрами модели, такими как оптимизатор, критерий потерь, кодировка целевой переменной и другие настройки.
+```python
+# Создадим необходимые объекты для модели
+hyserv = hymo.ModelService(model=hymodel, transformer_model_name=MODEL_NAME,
+                           df=sample_dtr, target=target,
+                           optimizer_type='adam', learning_rate=LEARNING_RATE)
+```
+5. Предобработка данных. Текстовые и числовые данные подготавливаются для обучения и тестирования. Кодировка категориальных признаков и их трансформация происходят в методе `preprocess_data`.
+```python
+# Подготовим данные
+train_text_encodings, train_numeric_features, le_broadcast, le_channel_type = \
+processor.preprocess_data(sample_dtr, is_train=True)
+
+test_text_encodings, test_numeric_features = \
+processor.preprocess_data(sample_dts, is_train=False)
+```
+6. Инициализация тренера `hymo.Trainer` используется для управления процессом обучения, включая оптимизацию и обработку шагов градиентного накопления.
+```python
+# Создадим тренера
+hytrainer = hymo.Trainer(model=hymodel,
+                         optimizer=hyserv.optimizer,
+                         criterion=hyserv.criterion,
+                         device=hyserv.device,
+                         gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS)
+```
+7. Обучение модели. Модель обучается с помощью текстовых и числовых признаков, а целевые метки кодируются через ModelService.
+```python
+# Запустим обучение
+hytrainer.train(
+    train_text_encodings=train_text_encodings,
+    train_numeric_features=train_numeric_features,
+    train_labels=hyserv.encoded_labels,
+    batch_size=BATCH_SIZE,
+    num_epochs=num_epochs,
+)
+```
+8. Оценка модели. После обучения модель можно оценить на тренировочных и тестовых данных. Если метки отсутствуют (например, для тестовых данных), метрики, такие как accuracy и F1-score, не будут рассчитаны, но предсказания все равно будут доступны.
+```python
+# Оценка на обучающих данных
+preds_train = hytrainer.evaluate(train_text_encodings, train_numeric_features, hyserv.encoded_labels, BATCH_SIZE)
+
+# Оценка на тестовых данных (без меток)
+preds_test = hytrainer.evaluate(test_text_encodings, test_numeric_features, None, BATCH_SIZE)
+```
+## Заключение
+Этот пример демонстрирует, как можно использовать гибридную модель с различными типами данных и как настраивать рабочий процесс для задач, где доступны и текстовые, и числовые данные. Подход работает как для небольших сниппетов, так и для полного набора данных.
