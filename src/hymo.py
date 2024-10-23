@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
 from sklearn.utils.class_weight import compute_class_weight
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from sklearn.preprocessing import LabelEncoder
 import numpy as np
 from tqdm import tqdm
@@ -265,10 +266,14 @@ class DataPreprocessor:
         - DataFrame либо полный, либо сниппет
         """
         if use_snippet:
-            # Формируем сниппет
-            sample_df_none = self.df_sample(df, fields, none_obj_count)
-            sample_df_rare = df[df['cartoon'] != 'none'].groupby('cartoon').sample(n=rare_obj_count, random_state=42)
-            sample_df = pd.concat([sample_df_none, sample_df_rare])
+            if 'cartoon' in df.columns:
+                # Формируем сниппет
+                sample_df_none = self.df_sample(df, fields, none_obj_count)
+                sample_df_rare = df[df['cartoon'] != 'none'].groupby('cartoon').sample(n=rare_obj_count, random_state=42)
+                sample_df = pd.concat([sample_df_none, sample_df_rare])
+            else:
+                sample_df = self.df_sample(df, fields, none_obj_count)
+            sample_df.reset_index(inplace=True)
             return sample_df
         else:
             # Возвращаем весь DataFrame
@@ -308,8 +313,8 @@ class DataPreprocessor:
         # # Шаг 4. Объединяем индексы редких классов и класса 'none'
         # selected_indices = np.concatenate([rare_class_indices, none_class_indices])
 
-        selected_indices = dtr.index.to_
-        print(len(selected_indices))
+        selected_indices = dtr.index
+        # print(len(selected_indices))
 
         # Шаг 5. Отбираем данные по этим индексам
         sample_text_encodings = {k: v[selected_indices] for k, v in text_encodings.items()}
@@ -396,3 +401,59 @@ class Trainer:
                 total_loss += loss.item()
 
             print(f'Epoch {epoch + 1}/{num_epochs}, Loss: {total_loss:.4f}')
+
+    def evaluate(self, text_encodings, numeric_features, labels=None, batch_size=32, average: str = 'macro') -> np.ndarray:
+        """
+        Функция для оценки модели на тестовых данных.
+        
+        Args:
+            text_encodings (dict): Токенизированные текстовые данные.
+            numeric_features (torch.Tensor): Числовые признаки.
+            labels (torch.Tensor, optional): Истинные метки классов. Если None, то оценка без метрик.
+            batch_size (int): Размер батча.
+            average (str): Тип усреднения для метрик ('macro', 'weighted').
+        
+        Returns:
+            np.ndarray: Предсказанные метки классов.
+        """
+        # Переключаем модель в режим оценки
+        self.model.eval()
+        
+        all_preds = []
+        all_labels = []
+
+        # Отключаем вычисление градиентов для оценки
+        with torch.no_grad():
+            for batch in self.batch_loader(text_encodings, numeric_features, labels, batch_size=batch_size):
+                if labels is not None:
+                    batch_text, batch_numeric, batch_labels = batch
+                    batch_labels = batch_labels.to(self.device)
+                    all_labels.extend(batch_labels.cpu().numpy())
+                else:
+                    batch_text, batch_numeric = batch
+                
+                batch_text = {k: v.to(self.device) for k, v in batch_text.items()}
+                batch_numeric = batch_numeric.to(self.device)
+                
+                # Прогоняем через модель и получаем логиты
+                logits = self.model(batch_text, batch_numeric)
+                
+                # Получаем предсказанные классы
+                predicted_labels = torch.argmax(logits, dim=1)
+                
+                # Сохраняем предсказания
+                all_preds.extend(predicted_labels.cpu().numpy())
+        
+        # Если метки не предоставлены, возвращаем только предсказания
+        if labels is None:
+            print("Метки не предоставлены, возврат только предсказанных классов.")
+            return np.array(all_preds)
+        
+        # Рассчитываем метрики
+        accuracy = accuracy_score(all_labels, all_preds)
+        f1 = f1_score(all_labels, all_preds, average=average)
+        
+        # Выводим метрики
+        print(f'Accuracy: {accuracy:.4f}, F1: {f1:.4f}')
+        
+        return np.array(all_preds)

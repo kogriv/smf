@@ -1,0 +1,11 @@
+pandas
+torch
+transformers
+scikit-learn
+numpy
+tqdm
+imbalanced-learn
+matplotlib
+nltk
+langdetect
+python-dotenv
